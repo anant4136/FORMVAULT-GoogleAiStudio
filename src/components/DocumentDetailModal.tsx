@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Eye,
   FileText,
+  Share2,
 } from 'lucide-react';
 import { VaultDocument, CATEGORIES, DocumentVersion } from '../types';
 import { DocumentThumbnail } from './DocumentThumbnail';
@@ -58,6 +59,29 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
     window.document.body.appendChild(a);
     a.click();
     window.document.body.removeChild(a);
+  };
+
+  const handleShare = async () => {
+    if (!document) return;
+    try {
+      if (navigator.share) {
+        const res = await fetch(document.dataUrl);
+        const blob = await res.blob();
+        const file = new File([blob], document.originalFileName, { type: document.mimeType });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: document.title,
+            files: [file],
+          });
+          return;
+        }
+      }
+      handleDownload(document.dataUrl, document.originalFileName);
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        handleDownload(document.dataUrl, document.originalFileName);
+      }
+    }
   };
 
   return (
@@ -390,13 +414,23 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Delete</span>
               </button>
-              <button
-                onClick={() => handleDownload(document.dataUrl, document.originalFileName)}
-                className="flex items-center space-x-1.5 px-4 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export Original</span>
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleShare}
+                  className="flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                  title="Share Document"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>Share</span>
+                </button>
+                <button
+                  onClick={() => handleDownload(document.dataUrl, document.originalFileName)}
+                  className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export</span>
+                </button>
+              </div>
             </>
           )}
         </div>

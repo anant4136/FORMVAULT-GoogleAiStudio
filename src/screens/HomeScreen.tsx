@@ -245,32 +245,36 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {profiles.map((profile) => (
-            <div
-              key={profile.id}
-              onClick={() => onNavigate('profiles')}
-              className="bg-white dark:bg-slate-800 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-700/80 hover:border-blue-500 transition cursor-pointer flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                    {profile.title}
-                  </h4>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
-                    {profile.documentIds.length} attached
-                  </span>
+          {profiles.map((profile) => {
+            const reqCount = profile.requirements?.length || profile.documentIds.length;
+            const mappedCount = profile.requirements?.filter(r => Boolean(r.assignedDocumentId)).length || 0;
+            return (
+              <div
+                key={profile.id}
+                onClick={() => onNavigate('profiles')}
+                className="bg-white dark:bg-slate-800 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-700/80 hover:border-blue-500 transition cursor-pointer flex flex-col justify-between shadow-2xs group"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-blue-600 transition">
+                      {profile.title}
+                    </h4>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                      {mappedCount}/{reqCount} Mapped
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                    {profile.targetOrganization}
+                  </p>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
-                  {profile.targetOrganization}
-                </p>
-              </div>
 
-              <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] font-medium text-blue-600 dark:text-blue-400">
-                <span>View checklist</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px] font-medium text-blue-600 dark:text-blue-400">
+                  <span>Prepare &amp; Export</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

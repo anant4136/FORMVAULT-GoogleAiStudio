@@ -56,6 +56,26 @@ export interface VaultDocument {
   versions: DocumentVersion[];
 }
 
+export type AllowedFileFormat = 'image/jpeg' | 'image/png' | 'image/webp' | 'application/pdf';
+
+export interface ProfileRequirement {
+  id: string;
+  name: string;
+  category: DocumentCategory;
+  assignedDocumentId?: string;
+  minSizeBytes?: number;
+  maxSizeBytes?: number;
+  allowedFormats?: AllowedFileFormat[];
+  requiredWidthPx?: number;
+  requiredHeightPx?: number;
+  minWidthPx?: number;
+  minHeightPx?: number;
+  maxWidthPx?: number;
+  maxHeightPx?: number;
+  pageCount?: number;
+  notes?: string;
+}
+
 export interface ApplicationProfile {
   id: string;
   title: string;
@@ -64,7 +84,38 @@ export interface ApplicationProfile {
   deadline?: number;
   documentIds: string[];
   requiredCategories: DocumentCategory[];
+  requirements: ProfileRequirement[];
   createdAt: number;
+  updatedAt?: number;
+}
+
+export interface PreparedDocumentItem {
+  requirementId: string;
+  requirementName: string;
+  category: DocumentCategory;
+  sourceDocument: VaultDocument;
+  status: 'ready' | 'warning' | 'error';
+  outputFileName: string;
+  outputMimeType: string;
+  outputSizeBytes: number;
+  outputDataUrl: string;
+  outputWidthPx?: number;
+  outputHeightPx?: number;
+  pageCount?: number;
+  transformationsApplied: string[];
+  warnings: string[];
+  errors: string[];
+}
+
+export interface PreparationPackageResult {
+  profileId: string;
+  profileTitle: string;
+  targetOrganization: string;
+  preparedItems: PreparedDocumentItem[];
+  allValid: boolean;
+  totalSizeBytes: number;
+  summaryText: string;
+  generatedAt: number;
 }
 
 export type NavScreen = 'home' | 'vault' | 'tools' | 'profiles' | 'settings';

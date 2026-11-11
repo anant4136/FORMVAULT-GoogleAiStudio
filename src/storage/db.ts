@@ -114,9 +114,60 @@ export async function getAllProfiles(): Promise<ApplicationProfile[]> {
     const store = tx.objectStore(STORE_PROFILES);
     const request = store.getAll();
 
-    request.onsuccess = () => resolve((request.result as ApplicationProfile[]) || []);
+    request.onsuccess = () => {
+      const profiles = ((request.result as ApplicationProfile[]) || []).map((p) => ({
+        ...p,
+        requirements: p.requirements || [],
+        documentIds: p.documentIds || [],
+      }));
+      resolve(profiles);
+    };
     request.onerror = () => reject(request.error);
   });
+}
+
+export async function getProfileById(id: string): Promise<ApplicationProfile | null> {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_PROFILES, 'readonly');
+    const store = tx.objectStore(STORE_PROFILES);
+    const request = store.get(id);
+
+    request.onsuccess = () => {
+      const p = request.result as ApplicationProfile | undefined;
+      if (!p) {
+        resolve(null);
+        return;
+      }
+      resolve({
+        ...p,
+        requirements: p.requirements || [],
+        documentIds: p.documentIds || [],
+      });
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function duplicateProfile(id: string): Promise<ApplicationProfile | null> {
+  const original = await getProfileById(id);
+  if (!original) return null;
+
+  const now = Date.now();
+  const cloned: ApplicationProfile = {
+    ...original,
+    id: `profile-${now}-${Math.random().toString(36).substr(2, 6)}`,
+    title: `${original.title} (Copy)`,
+    createdAt: now,
+    updatedAt: now,
+    requirements: original.requirements.map((req) => ({
+      ...req,
+      id: `req-${now}-${Math.random().toString(36).substr(2, 5)}`,
+    })),
+  };
+
+  await saveProfile(cloned);
+  return cloned;
 }
 
 export async function saveProfile(profile: ApplicationProfile): Promise<void> {
@@ -124,7 +175,10 @@ export async function saveProfile(profile: ApplicationProfile): Promise<void> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_PROFILES, 'readwrite');
     const store = tx.objectStore(STORE_PROFILES);
-    const request = store.put(profile);
+    const request = store.put({
+      ...profile,
+      updatedAt: Date.now(),
+    });
 
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
@@ -392,27 +446,95 @@ export async function seedInitialSamplesIfNeeded(): Promise<void> {
   await saveDocument(sample4);
   await saveDocument(sample5);
 
-  // Seed sample Application Profile
+  // Seed sample Application Profiles with full editable requirements
   const profile1: ApplicationProfile = {
     id: 'profile-1',
     title: 'Civil Services / Govt Exam 2026',
     description: 'Required documents for online portal registration, photo upload (<50KB), and signature upload (<20KB).',
     targetOrganization: 'Public Service Commission',
     deadline: now + 86400000 * 25,
-    documentIds: ['sample-doc-1', 'sample-doc-2', 'sample-doc-3', 'sample-doc-4'],
-    requiredCategories: ['ID_CARDS', 'ACADEMIC', 'SIGNATURES', 'PHOTOS'],
-    createdAt: now - 86400000 * 5
+    documentIds: ['sample-doc-1', 'sample-doc-3', 'sample-doc-5', 'sample-doc-4'],
+    requiredCategories: ['PHOTOS', 'SIGNATURES', 'ACADEMIC', 'ID_CARDS'],
+    requirements: [
+      {
+        id: 'req-1-photo',
+        name: 'Passport Photograph',
+        category: 'PHOTOS',
+        assignedDocumentId: 'sample-doc-1', // maps to passport doc
+        allowedFormats: ['image/jpeg'],
+        minSizeBytes: 20 * 1024,
+        maxSizeBytes: 50 * 1024,
+        requiredWidthPx: 413,
+        requiredHeightPx: 531,
+        notes: 'White background, exactly 35x45mm, JPEG between 20KB and 50KB.',
+      },
+      {
+        id: 'req-1-sign',
+        name: 'Candidate Signature',
+        category: 'SIGNATURES',
+        assignedDocumentId: 'sample-doc-3', // maps to signature doc
+        allowedFormats: ['image/jpeg'],
+        minSizeBytes: 10 * 1024,
+        maxSizeBytes: 20 * 1024,
+        requiredWidthPx: 600,
+        requiredHeightPx: 250,
+        notes: 'Black ink, clean white background, JPEG between 10KB and 20KB.',
+      },
+      {
+        id: 'req-1-acad',
+        name: 'Degree Transcript / Marksheet',
+        category: 'ACADEMIC',
+        assignedDocumentId: 'sample-doc-5', // maps to multi-page PDF
+        allowedFormats: ['application/pdf'],
+        maxSizeBytes: 300 * 1024,
+        notes: 'Consolidated graduation transcript in PDF format under 300 KB.',
+      },
+      {
+        id: 'req-1-id',
+        name: 'National Photo ID Proof',
+        category: 'ID_CARDS',
+        assignedDocumentId: 'sample-doc-4', // maps to national ID
+        allowedFormats: ['application/pdf', 'image/jpeg'],
+        maxSizeBytes: 300 * 1024,
+        notes: 'Aadhaar / National ID / Passport scan with clear birth date.',
+      },
+    ],
+    createdAt: now - 86400000 * 5,
+    updatedAt: now - 86400000 * 5,
   };
 
   const profile2: ApplicationProfile = {
     id: 'profile-2',
-    title: 'Software Engineer Application Bundle',
-    description: 'Degree credentials, identity verification, and specimen signatures for onboarding.',
-    targetOrganization: 'Tech Enterprises Global',
+    title: 'University Graduate Admission',
+    description: 'Degree credentials, identity verification, and specimen signatures for university admissions.',
+    targetOrganization: 'Global Graduate Admissions',
     deadline: now + 86400000 * 45,
-    documentIds: ['sample-doc-2', 'sample-doc-1'],
-    requiredCategories: ['ACADEMIC', 'ID_CARDS'],
-    createdAt: now - 86400000 * 2
+    documentIds: ['sample-doc-1', 'sample-doc-5'],
+    requiredCategories: ['PHOTOS', 'ACADEMIC', 'ID_CARDS'],
+    requirements: [
+      {
+        id: 'req-2-photo',
+        name: 'Applicant Photograph',
+        category: 'PHOTOS',
+        assignedDocumentId: 'sample-doc-1',
+        allowedFormats: ['image/jpeg', 'image/png'],
+        maxSizeBytes: 100 * 1024,
+        requiredWidthPx: 413,
+        requiredHeightPx: 531,
+        notes: 'Recent passport photo on neutral background.',
+      },
+      {
+        id: 'req-2-transcript',
+        name: 'Official Degree Transcript',
+        category: 'ACADEMIC',
+        assignedDocumentId: 'sample-doc-5',
+        allowedFormats: ['application/pdf'],
+        maxSizeBytes: 500 * 1024,
+        notes: 'Consolidated semester transcript with grades.',
+      },
+    ],
+    createdAt: now - 86400000 * 2,
+    updatedAt: now - 86400000 * 2,
   };
 
   await saveProfile(profile1);

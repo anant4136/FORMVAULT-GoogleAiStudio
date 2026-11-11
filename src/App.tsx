@@ -8,6 +8,7 @@ import {
   getAllProfiles,
   saveProfile,
   deleteProfile,
+  duplicateProfile,
   getStorageUsageBytes,
   purgeCache,
   seedInitialSamplesIfNeeded,
@@ -17,7 +18,6 @@ import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { DocumentDetailModal } from './components/DocumentDetailModal';
 import { ImportModal } from './components/ImportModal';
-import { CodeInspectorModal } from './components/CodeInspectorModal';
 import { SplashScreen } from './screens/SplashScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { VaultScreen } from './screens/VaultScreen';
@@ -41,7 +41,6 @@ export default function App() {
   // Modals & Navigation states
   const [selectedDocument, setSelectedDocument] = useState<VaultDocument | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
-  const [isCodeInspectorOpen, setIsCodeInspectorOpen] = useState(false);
   const [isPassportStudioOpen, setIsPassportStudioOpen] = useState(false);
   const [isSignatureStudioOpen, setIsSignatureStudioOpen] = useState(false);
   const [isPdfStudioOpen, setIsPdfStudioOpen] = useState(false);
@@ -133,6 +132,18 @@ export default function App() {
     await refreshData();
   };
 
+  const handleDuplicateProfile = async (id: string) => {
+    await duplicateProfile(id);
+    await refreshData();
+  };
+
+  const handleImportBackup = async (importedDocs: VaultDocument[]) => {
+    for (const doc of importedDocs) {
+      await saveDocument(doc);
+    }
+    await refreshData();
+  };
+
   const handleOpenPdfStudio = (tab: PdfStudioTab = 'viewer', doc?: VaultDocument) => {
     if (doc) {
       setSelectedDocForTool(doc);
@@ -176,10 +187,7 @@ export default function App() {
       {/* Main Mobile App Container */}
       <div className="w-full max-w-md min-h-screen bg-slate-50/80 dark:bg-slate-900 shadow-xl border-x border-slate-200/80 dark:border-slate-800/80 flex flex-col relative">
         {/* Top Header */}
-        <Header
-          onOpenImport={() => setIsImportOpen(true)}
-          onOpenCodeInspector={() => setIsCodeInspectorOpen(true)}
-        />
+        <Header onOpenImport={() => setIsImportOpen(true)} />
 
         {/* Screen Content */}
         <main className="flex-1 p-4 overflow-y-auto">
@@ -225,7 +233,9 @@ export default function App() {
               documents={documents}
               onSaveProfile={handleSaveProfile}
               onDeleteProfile={handleDeleteProfile}
+              onDuplicateProfile={handleDuplicateProfile}
               onSelectDocument={setSelectedDocument}
+              onSaveVersion={handleSaveVersion}
             />
           )}
 
@@ -239,8 +249,8 @@ export default function App() {
                 await purgeCache();
                 await refreshData();
               }}
-              onOpenCodeInspector={() => setIsCodeInspectorOpen(true)}
               documents={documents}
+              onImportBackup={handleImportBackup}
             />
           )}
         </main>
@@ -296,11 +306,6 @@ export default function App() {
           initialDocument={selectedDocForTool}
           onSaveVersion={handleSaveVersion}
           onSaveNewDocument={handleSaveDocument}
-        />
-
-        <CodeInspectorModal
-          isOpen={isCodeInspectorOpen}
-          onClose={() => setIsCodeInspectorOpen(false)}
         />
 
         <PdfStudioModal
