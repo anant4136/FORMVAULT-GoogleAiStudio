@@ -1,0 +1,8 @@
+{
+  "name": "FormVault — Offline Document Vault & Preparation Toolkit",
+  "description": "Secure, offline-first document management and preparation toolkit for students, job applicants, and professionals. Organize documents, generate resized photos, transparent signatures, and PDFs locally with zero cloud dependencies.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
